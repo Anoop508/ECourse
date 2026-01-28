@@ -1,5 +1,8 @@
 const express = require("express");
 const router = express.Router();
+const Access = require('../models/access.model')
+const UserModel = require('../models/user.model');
+const pdfModel = require('../models/pdf.model')
 const auth = require("../middleware/authUser");
 const Pdf = require("../models/Pdf");
 const Access = require("../models/Access");
@@ -15,29 +18,118 @@ AWS.config.update({
 const s3 = new AWS.S3();
 
 // List PDFs with access status
-router.get("/my-pdfs", auth, async (req, res) => {
-  const pdfs = await Pdf.find();
-  const access = await Access.find({ userId: req.user._id });
-  const list = pdfs.map(pdf => {
-    const a = access.find(x => x.pdfId.toString() === pdf._id.toString());
-    return {
-      id: pdf._id,
-      title: pdf.title,
-      status: a ? a.status : "none"
-    };
-  });
-  res.json(list);
-});
+async function listOfRequestedPdfAccess(req, res) {
+  try {
+    const listOfRequestedPdfAccess = await Access.find();
+    const list = await Promise.all(
+      listOfRequestedPdfAccess.map(async (item) => {
+        const user = await UserModel.findOne({ _id: item.userId });
+        const pdf = await pdfModel.findOne({ _id: item.pdfId });
+        return { userId: user?._id, pdfId: pdf?._id, userName: user?.name, pdfTitle: pdf?.title, pdfAccess: item.status }
+      })
+    );
+
+
+    res.status(200).json({
+      listOfRequestedPdfAccess: list,
+    })
+
+  } catch (err) {
+    res.status(500).json({ err: err, message: 'Something went wrong' })
+  }
+};
+
+async function getListofPdfAsPerUserWise(req, res) {
+  const { userId } = req.body;
+
+  try {
+
+    const pdfList = await pdfModel.find();
+
+    const accessList = await Access.find({ userId });
+    console.log('hi', accessList);
+    const accessMap = {};
+    accessList.forEach(item => {
+      accessMap[item.pdfId.toString()] = item.status;
+    });
+
+    // console.log('accessMap', accessMap);
+    // 4. Merge PDFs with status
+    const result = pdfList.map(pdf => {
+      // console.log('pdf', pdf);
+      const access = accessMap[pdf._id.toString()];
+
+      console.log('access', access);
+      // console.log(typeof(access));
+
+      const hasAccess = access &&  access === ('Approved');
+ 
+      return {
+        _id: pdf._id,
+        title: pdf.title,
+        status: access && (access === 'Approved' || 'Rejected' || 'pending') ? access : "need access",
+        s3Key: hasAccess ? pdf.s3Key : null
+      };
+    });
+
+
+    res.status(200).json(result);
+  }
+  catch(err){
+        res.status(500).json({
+            message: "Something went wrong",
+            error: err
+        })
+    }
+
+}
 
 // Request access
-router.post("/request-access", auth, async (req, res) => {
-  const { pdfId } = req.body;
-  const existing = await Access.findOne({ userId: req.user._id, pdfId });
-  if (existing) return res.status(400).json({ message: "Already requested or has access" });
+async function requestpdfAccess(req, res) {
+  const { pdfId, userId } = req.body;
+  try {
+    const existing = await Access.findOne({ userId: userId, pdfId: pdfId });
+    if (existing) return res.status(400).json({ message: "Already requested or has access" });
 
-  await Access.create({ userId: req.user._id, pdfId });
-  res.json({ message: "Access requested" });
-});
+    await Access.create({ userId: userId, pdfId: pdfId });
+    res.status(201).json({ message: "Access requested successfully" });
+  }
+  catch (err) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: err
+    })
+  }
+};
+
+// Request pdfAccess
+async function pdfAccess(req, res) {
+  const { userId, pdfId, access } = req.body;
+  try {
+    const accessDetails = await Access.findOne({ userId, pdfId });
+
+    const isUpdated = await Access.updateOne(
+      { _id: accessDetails._id },
+      {
+        $set:
+        {
+          status: access === true ? 'Approved' : 'Rejected',
+          grantedAt: Date.now(),
+        }
+      })
+    res.status(200).json({
+      message: isUpdated?.modifiedCount >= 1 && "Access status updated Succcessfully."
+    })
+
+  } catch (err) {
+    res.status(500).json({
+      err: err,
+      message: 'Something went wrong'
+    })
+  }
+
+}
+
 
 // Get PDF with watermark if approved
 router.get("/:id", auth, async (req, res) => {
@@ -91,3 +183,4 @@ router.get("/:id", auth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports = { requestpdfAccess, listOfRequestedPdfAccess, pdfAccess, getListofPdfAsPerUserWise }

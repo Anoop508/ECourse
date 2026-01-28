@@ -1,5 +1,6 @@
 const express = require('express');
 const userAuth = require('../controllers/auth.controller');
+const pdf = require('../controllers/pdf.controler');
 const verifyAdminToken = require('../middleware/authAdmin');
 const verifyUserToken = require('../middleware/authUser');
 
@@ -16,10 +17,14 @@ router.post('/user/login',  userAuth.userlogin);
 router.post('/user/logout', verifyUserToken, userAuth.logoutUser)
 router.put('/user/update', verifyUserToken, userAuth.UpdateUserPassword);
 router.get('/user/view-pdf', verifyAdminToken, verifyUserToken, userAuth.viewpdf);
+router.post('/user/request-access', verifyUserToken, pdf.requestpdfAccess);
+router.post('/user/getListofPdfAsPerUserWise', verifyUserToken, pdf.getListofPdfAsPerUserWise);
 
 router.get('/admin/userList', verifyAdminToken, verifyUserToken, userAuth.getUserList);
-router.post('/admin/generate-upload-url', verifyAdminToken, verifyUserToken, userAuth.generateUploadpdfurl)
-router.post('/admin/save-pdf', verifyAdminToken, verifyUserToken, userAuth.savepdf)
+router.post('/admin/generate-upload-url', verifyAdminToken, verifyUserToken, userAuth.generateUploadpdfurl);
+router.post('/admin/save-pdf', verifyAdminToken, verifyUserToken, userAuth.savepdf);
+router.get('/admin/listOfRequestedPdfAccess', verifyAdminToken, verifyUserToken, pdf.listOfRequestedPdfAccess);
+router.post('/admin/pdf-access', verifyAdminToken, verifyUserToken, pdf.pdfAccess);     
 
 
 // router.post('/foodPatner/register', userAuth.foodPartnerRegister);
