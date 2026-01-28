@@ -4,8 +4,6 @@ const Access = require('../models/access.model')
 const UserModel = require('../models/user.model');
 const pdfModel = require('../models/pdf.model')
 const auth = require("../middleware/authUser");
-const Pdf = require("../models/Pdf");
-const Access = require("../models/Access");
 const AWS = require("aws-sdk");
 const { PDFDocument, rgb } = require("pdf-lib");
 
@@ -137,7 +135,7 @@ router.get("/:id", auth, async (req, res) => {
   const access = await Access.findOne({ userId: req.user._id, pdfId, status: "approved" });
   if (!access) return res.status(403).json({ message: "No access" });
 
-  const pdf = await Pdf.findById(pdfId);
+  const pdf = await pdfModel.findById(pdfId);
   if (!pdf) return res.status(404).json({ message: "PDF not found" });
 
   // Get PDF from S3
