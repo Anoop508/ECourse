@@ -16,7 +16,7 @@ router.post('/user/register', userAuth.registerUser);
 router.post('/user/login',  userAuth.userlogin);
 router.post('/user/logout', verifyUserToken, userAuth.logoutUser)
 router.put('/user/update', verifyUserToken, userAuth.UpdateUserPassword);
-router.post('/user/view-pdf', verifyAdminToken, verifyUserToken, userAuth.viewpdf);
+router.post('/user/view-pdf', verifyUserToken, userAuth.viewpdf);
 router.post('/user/request-access', verifyUserToken, pdf.requestpdfAccess);
 router.post('/user/getListofPdfAsPerUserWise', verifyUserToken, pdf.getListofPdfAsPerUserWise);
 
