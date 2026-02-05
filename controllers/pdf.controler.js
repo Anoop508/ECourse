@@ -23,7 +23,7 @@ async function listOfRequestedPdfAccess(req, res) {
       listOfRequestedPdfAccess.map(async (item) => {
         const user = await UserModel.findOne({ _id: item.userId });
         const pdf = await pdfModel.findOne({ _id: item.pdfId });
-        return { userId: user?._id, pdfId: pdf?._id, userName: user?.name, pdfTitle: pdf?.title, pdfAccess: item.status }
+        return { userId: user?._id, pdfId: pdf?._id, userName: user?.name, userEmail: user?.email, pdfTitle: pdf?.title, pdfAccess: item.status }
       })
     );
 
