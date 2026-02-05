@@ -52,7 +52,7 @@ async function registerUser(req, res) {
 
 async function userlogin(req, res) {
     const { email, password } = req.body;
-    const user = await userModel.findOne({ email }).select('-__v');
+    const user = await userModel.findOne({ email }).select('-__v').select('+password');
 
     if (!user) {
         return res.status(403).json({
